@@ -2353,32 +2353,6 @@ define Device/netis_nx31
 endef
 TARGET_DEVICES += netis_nx31
 
-define Device/netis_nx32u
-  DEVICE_VENDOR := netis
-  DEVICE_MODEL := NX32U
-  DEVICE_DTS := mt7981b-netis-nx32u
-  DEVICE_DTS_DIR := ../dts
-  UBINIZE_OPTS := -E 5
-  BLOCKSIZE := 128k
-  PAGESIZE := 2048
-  KERNEL_IN_UBI := 1
-  UBOOTENV_IN_UBI := 1
-  IMAGES := sysupgrade.itb
-  KERNEL_INITRAMFS_SUFFIX := -recovery.itb
-  KERNEL := kernel-bin | gzip
-  KERNEL_INITRAMFS := kernel-bin | lzma | \
-	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
-  IMAGE/sysupgrade.itb := append-kernel | \
-	fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-static-with-rootfs | \
-	append-metadata
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware \
-	kmod-usb3 kmod-usb-ledtrig-usbport
-  ARTIFACTS := preloader.bin bl31-uboot.fip
-  ARTIFACT/preloader.bin := mt7981-bl2 spim-nand-ddr3
-  ARTIFACT/bl31-uboot.fip := mt7981-bl31-uboot netis_nx32u
-endef
-TARGET_DEVICES += netis_nx32u
-
 define Device/nokia_ea0326gmp
   DEVICE_VENDOR := Nokia
   DEVICE_MODEL := EA0326GMP
@@ -2798,6 +2772,32 @@ define Device/tplink_fr365-v1
   DEVICE_PACKAGES := fitblk kmod-sfp kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
 endef
 TARGET_DEVICES += tplink_fr365-v1
+
+define Device/tplink_tl-wr3002x-v1
+  DEVICE_VENDOR := TP-Link
+  DEVICE_MODEL := TL-WR3002X
+  DEVICE_VARIANT := v1
+  DEVICE_DTS := mt7981b-tplink-tl-wr3002x-v1
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES := tplink,tl-wr3002x-v1
+
+  # From Configs/partition.conf:
+  # os-image 0x00400000 (4096k) and file-system 0x019e0000 (26496k)
+  IMAGE_SIZE := 30592k
+
+  IMAGES += factory.bin sysupgrade.bin
+
+  # Factory image layout matches vendor flash: kernel then rootfs.
+  # MISSING in provided files:
+  # - exact kernel format expected by bootloader (uImage, Image, FIT, gzip etc)
+  IMAGE/factory.bin := append-kernel | pad-to 4096k | append-rootfs | pad-rootfs | check-size
+
+  # Sysupgrade: raw combined image with metadata.
+  # If your target prefers sysupgrade.itb, that detail is not present in the provided files.
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
+endef
+TARGET_DEVICES += tplink_tl-wr3002x-v1
 
 define Device/tplink_tl-xdr-common
   DEVICE_VENDOR := TP-Link

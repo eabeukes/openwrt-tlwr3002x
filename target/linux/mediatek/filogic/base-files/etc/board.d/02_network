@@ -55,7 +55,6 @@ mediatek_setup_interfaces()
 	jcg,q30-pro|\
 	keenetic,kn-3711|\
 	keenetic,kn-3811|\
-	netis,nx32u|\
 	qihoo,360t7|\
 	routerich,ax3000|\
 	routerich,ax3000-ubootmod|\
@@ -137,6 +136,8 @@ mediatek_setup_interfaces()
 	glinet,gl-x3000|\
 	glinet,gl-xe3000|\
 	openembed,som7981|\
+	tplink,tl-wr3002x|\
+	tplink,tl-wr3002x-v1|\
 	openwrt,one)
 		ucidef_set_interfaces_lan_wan eth1 eth0
 		;;
