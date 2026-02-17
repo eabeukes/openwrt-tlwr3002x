@@ -14,10 +14,6 @@
 
 	aliases {
 		serial0 = &uart0;
-		led-boot = &led_status;
-		led-failsafe = &led_status;
-		led-running = &led_status;
-		led-upgrade = &led_status;
 	};
 
 	chosen {
@@ -31,16 +27,34 @@
 
 	gpio-keys {
 		compatible = "gpio-keys";
+		mode {
+			label = "mode";
+			linux,code = <BTN_2>;
+			gpios = <&pio 7 GPIO_ACTIVE_LOW>;
+		};
+	};
+	gpio-keys-polled {
+		compatible = "gpio-keys-polled";
+		poll-interval = <100>;
 
 		reset {
 			label = "reset";
 			linux,code = <KEY_RESTART>;
-			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
+			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
 		};
 	};
-
 	leds {
-		compatible = "gpio-leds";
+		compatible = "gpio-leds";	
+
+		red {
+			gpios = <&pio 34 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+		};
+		blue {
+			gpios = <&pio 35 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "timer";
+		};
 	};
 };
 
@@ -50,6 +64,73 @@
 
 &watchdog {
 	status = "okay";
+};
+
+
+&mmc0 {
+         pinctrl-names = "default", "state_uhs";
+         pinctrl-0 = <&mmc0_pins_default>;
+         pinctrl-1 = <&mmc0_pins_uhs>;
+         bus-width = <4>;
+         max-frequency = <50000000>;
+         cap-sd-highspeed;
+         cd-gpios = <&pio 5 GPIO_ACTIVE_LOW>;
+         wp-gpios = <&pio 8 GPIO_ACTIVE_LOW>;
+         vmmc-supply = <&reg_3p3v>;
+         vqmmc-supply = <&reg_3p3v>;
+         status = "okay";
+};
+
+
+&eth {
+        status = "okay";
+
+        gmac0: mac@0 {
+                compatible = "mediatek,eth-mac";
+                reg = <0>;
+                phy-mode = "2500base-x";
+                nick-index = <0>;
+
+                fixed-link {
+                        speed = <2500>;
+                        full-duplex;
+                        pause;
+                        link-gpio = <&pio 13 0>;
+                        phy-handle = <&phy5>;
+                        label = "eth0";
+                };
+        };
+
+        gmac1: mac@1 {
+                compatible = "mediatek,eth-mac";
+                reg = <1>;
+                phy-mode = "gmii";
+                phy-handle = <&phy0>;
+                nick-index = <1>;
+        };
+
+        mdio: mdio-bus {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                phy0: ethernet-phy@0 {
+                    compatible = "ethernet-phy-id03a2.9461";
+                    reg = <0>;
+                    phy-mode = "gmii";
+                    nvmem-cells = <&phy_calibration>;
+                    nvmem-cell-names = "phy-cal-data";
+                };
+
+                phy5: phy@5 {
+                        compatible = "ethernet-phy-id67c9.de0a";
+                        reg = <5>;
+                        reset-gpios = <&pio 1 1>;
+                        reset-assert-us = <600>;
+                        reset-deassert-us = <20000>;
+                        phy-mode = "2500base-x";
+                        partner_gmac = <0>;
+                };
+        };
 };
 
 /*
@@ -283,4 +364,61 @@
 			bias-pull-down = <MTK_PUPD_SET_R1R0_11>;
 		};
 	};
+	mmc0_pins_default: mmc0-pins-default {
+		mux {
+			function = "flash";
+			groups = "emmc_45";
+		};
+		/* EMMC_DAT0: SPI0_CLK
+		 * EMMC_DAT1: SPI0_MOSI
+		 * EMMC_DAT2: SPI0_MISO
+		 * EMMC_DAT3: SPI0_CS
+		 * EMMC_CMD : SPI1_MISO
+		 * EMMC_CLK : SPI1_CS
+		 */
+		conf-cmd-dat {
+			pins = "SPI0_CLK", "SPI0_MOSI", "SPI0_MISO",
+			       "SPI0_CS", "SPI1_MISO";
+			input-enable;
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+		conf-clk {
+			pins = "SPI1_CS";
+			drive-strength = <MTK_DRIVE_12mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+	};
+
+	mmc0_pins_uhs: mmc0-pins-uhs {
+		mux {
+			function = "flash";
+			groups = "emmc_45";
+		};
+		conf-cmd-dat {
+			pins = "SPI0_CLK", "SPI0_MOSI", "SPI0_MISO",
+			       "SPI0_CS", "SPI1_MISO";
+			input-enable;
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+		conf-clk {
+			pins = "SPI1_CS";
+			drive-strength = <MTK_DRIVE_12mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+	};
+};
+&xhci {
+	mediatek,u3p-dis-msk = <0x0>;
+	phys = <&u2port0 PHY_TYPE_USB2>,
+	       <&u3port0 PHY_TYPE_USB3>;
+	status = "okay";
+};
+&wed {
+	dy_txbm_enable = "true";
+	dy_txbm_budget = <8>;
+	txbm_init_sz = <8>;
+	txbm_max_sz = <32>;
+	status = "okay";
 };
