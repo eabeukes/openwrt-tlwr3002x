@@ -2834,6 +2834,31 @@ define Device/tplink_fr365-v1
 endef
 TARGET_DEVICES += tplink_fr365-v1
 
+define Device/tplink_tl-wr3002x-v1
+  DEVICE_VENDOR := TP-Link
+  DEVICE_MODEL := TL-WR3002X
+  DEVICE_VARIANT := v1
+  DEVICE_DTS := mt7981b-tplink-tl-wr3002x-v1
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES := tplink,tl-wr3002x-v1
+
+  # From GPL:Configs/partition.conf:
+  # os-image 0x00400000 (4096k) and file-system 0x019e0000 (26496k)
+  IMAGE_SIZE := 30592k
+  KERNEL_LOADADDR := 0x48080000
+  ARTIFACT/preloader.bin := mediatek_mt7981-rfb-nor-preloader.bin
+  ARTIFACT/bl31-uboot.fip := mediatek_mt7981-rfb-nor-bl31-uboot.fip
+  IMAGES += factory.bin sysupgrade.bin
+  IMAGE/factory.bin := append-kernel | pad-to 4096k | append-rootfs | pad-rootfs | check-size
+  IMAGE/sysupgrade.bin := append-kernel | pad-to 4096k | append-rootfs | pad-rootfs | check-size | append-metadata
+  KERNEL := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
+  DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
+endef
+TARGET_DEVICES += tplink_tl-wr3002x-v1
+
 define Device/tplink_tl-xdr-common
   DEVICE_VENDOR := TP-Link
   DEVICE_DTS_DIR := ../dts

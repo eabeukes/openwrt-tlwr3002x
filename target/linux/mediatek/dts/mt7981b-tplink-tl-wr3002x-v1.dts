@@ -1,0 +1,286 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR MIT)
+
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
+
+#include "mt7981b.dtsi"
+
+/ {
+	model = "TP-Link TL-WR3002X v1";
+	compatible = "tplink,tl-wr3002x-v1", "mediatek,mt7981";
+
+	aliases {
+		serial0 = &uart0;
+		led-boot = &led_status;
+		led-failsafe = &led_status;
+		led-running = &led_status;
+		led-upgrade = &led_status;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@40000000 {
+		reg = <0 0x40000000 0 0x20000000>;
+		device_type = "memory";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		reset {
+			label = "reset";
+			linux,code = <KEY_RESTART>;
+			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&watchdog {
+	status = "okay";
+};
+
+/*
+ * SPI NOR flash partitions
+ * Source of truth: Configs/partition.conf
+ *
+ * Note: vendor layout splits os-image and file-system, but they are contiguous.
+ * For OpenWrt upgrades it is usually simplest to write a single 'firmware'
+ * image spanning both. That is what we do below: 0x00100000..0x01ee0000.
+ */
+&spi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi2_flash_pins>;
+	status = "okay";
+
+	spi_nor@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+
+		/* Taken from Configs/mt7981-spim-nor-rfb.dts */
+		spi-cal-enable;
+		spi-cal-mode = "read-data";
+		spi-cal-datalen = <7>;
+		spi-cal-data = /bits/ 8 <
+			0x53 0x46 0x5F 0x42 0x4F 0x4F 0x54>; /* "SF_BOOT" */
+		spi-cal-addrlen = <1>;
+		spi-cal-addr = /bits/ 32 <0x0>;
+
+		reg = <0>;
+		spi-max-frequency = <52000000>;
+		spi-tx-buswidth = <4>;
+		spi-rx-buswidth = <4>;
+
+		partition@000000 {
+			label = "fs-uboot";
+			reg = <0x00000000 0x000ff000>;
+			read-only;
+		};
+
+		partition@0ff000 {
+			label = "u-boot-env";
+			reg = <0x000ff000 0x00001000>;
+			/*
+			 * Matches U-Boot config:
+			 * CONFIG_ENV_OFFSET=0xff000, CONFIG_ENV_SIZE=0x1000
+			 *
+			 * Marked read-only in OpenWrt to avoid accidental writes.
+			 * If you want OpenWrt to manage U-Boot env, drop read-only.
+			 */
+			read-only;
+		};
+
+		partition@100000 {
+			label = "firmware";
+			reg = <0x00100000 0x01de0000>; /* os-image + file-system */
+		};
+
+		partition@1ee0000 {
+			label = "default-config";
+			reg = <0x01ee0000 0x00010000>;
+			read-only;
+		};
+
+		partition@1ef0000 {
+			label = "hsp-def-config";
+			reg = <0x01ef0000 0x00010000>;
+			read-only;
+		};
+
+		partition@1f00000 {
+			label = "ext-def-config";
+			reg = <0x01f00000 0x00010000>;
+			read-only;
+		};
+
+		partition@1f10000 {
+			label = "partition-table";
+			reg = <0x01f10000 0x00002000>;
+			read-only;
+		};
+
+		partition@1f12000 {
+			label = "profile";
+			reg = <0x01f12000 0x0000c000>;
+			read-only;
+		};
+
+		partition@1f1e000 {
+			label = "soft-version";
+			reg = <0x01f1e000 0x00001000>;
+			read-only;
+		};
+
+		partition@1f1f000 {
+			label = "support-list";
+			reg = <0x01f1f000 0x00001000>;
+			read-only;
+		};
+
+		partition@1f20000 {
+			label = "user-config";
+			reg = <0x01f20000 0x00020000>;
+			read-only;
+		};
+
+		partition@1f40000 {
+			label = "router-config";
+			reg = <0x01f40000 0x00020000>;
+			read-only;
+		};
+
+		partition@1f60000 {
+			label = "hsp-config";
+			reg = <0x01f60000 0x00020000>;
+			read-only;
+		};
+
+		partition@1f80000 {
+			label = "ext-config";
+			reg = <0x01f80000 0x00020000>;
+			read-only;
+		};
+
+		partition@1fa0000 {
+			label = "auc_data";
+			reg = <0x01fa0000 0x00030000>;
+			read-only;
+		};
+
+		partition@1fd0000 {
+			label = "certificate";
+			reg = <0x01fd0000 0x0000a000>;
+			read-only;
+		};
+
+		partition@1fda000 {
+			label = "extra-para";
+			reg = <0x01fda000 0x00001000>;
+			read-only;
+		};
+
+		partition@1fdb000 {
+			label = "tss_key";
+			reg = <0x01fdb000 0x00001000>;
+			read-only;
+		};
+
+		product_info: partition@1fdc000 {
+			label = "product-info";
+			reg = <0x01fdc000 0x00001000>;
+			read-only;
+		};
+
+		default_mac: partition@1fdd000 {
+			label = "default-mac";
+			reg = <0x01fdd000 0x00001000>;
+			read-only;
+
+			nvmem-layout {
+				compatible = "fixed-layout";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				macaddr_default_mac_24: macaddr@24 {
+					compatible = "mac-base";
+					reg = <0x24 0x6>;
+					#nvmem-cell-cells = <1>;
+				};
+			};
+		};
+
+		partition@1fde000 {
+			label = "pin";
+			reg = <0x01fde000 0x00001000>;
+			read-only;
+		};
+
+		partition@1fdf000 {
+			label = "device-id";
+			reg = <0x01fdf000 0x00001000>;
+			read-only;
+		};
+
+		radio: partition@1fe0000 {
+			label = "radio";
+			reg = <0x01fe0000 0x00010000>;
+			read-only;
+
+			/*
+			 * MISSING in provided files:
+			 * - calibration layout and exact size needed by mt76
+			 * This assumes eeprom starts at 0 and is 0x1000 bytes.
+			 */
+			nvmem-layout {
+				compatible = "fixed-layout";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				eeprom_radio_0: eeprom@0 {
+					reg = <0x0 0x1000>;
+				};
+			};
+		};
+
+		partition@1ff0000 {
+			label = "cal-flag";
+			reg = <0x01ff0000 0x00001000>;
+			read-only;
+		};
+	};
+};
+
+/* Taken from Configs/mt7981-spim-nor-rfb.dts */
+&pio {
+	spi2_flash_pins: spi2-pins {
+		mux {
+			function = "spi";
+			groups = "spi2", "spi2_wp_hold";
+		};
+
+		conf-pu {
+			pins = "SPI2_CS", "SPI2_HOLD", "SPI2_WP";
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_11>;
+		};
+
+		conf-pd {
+			pins = "SPI2_CLK", "SPI2_MOSI", "SPI2_MISO";
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_11>;
+		};
+	};
+};

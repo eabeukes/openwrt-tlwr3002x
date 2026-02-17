@@ -139,7 +139,8 @@ mediatek_setup_interfaces()
 	glinet,gl-x3000|\
 	glinet,gl-xe3000|\
 	openembed,som7981|\
-	openwrt,one)
+	openwrt,one|\
+	tplink,tl-wr3002x-v1)
 		ucidef_set_interfaces_lan_wan eth1 eth0
 		;;
 	dlink,aquila-pro-ai-m30-a1|\
@@ -288,6 +289,10 @@ mediatek_setup_macs()
 	tplink,fr365-v1)
 		lan_mac=$(strings /dev/mtd11 | grep 'option macaddr' | awk -F"'" '{print $2}')
 		wan_mac="$(macaddr_add $lan_mac 1)"
+		;;
+	tplink,tl-wr3002x-v1)
+		lan_mac=$(mtd_get_mac_binary default-mac 0x2A)
+		wan_mac=$(mtd_get_mac_binary default-mac 0x24)
 		;;
 	xiaomi,mi-router-ax3000t|\
 	xiaomi,mi-router-ax3000t-ubootmod|\
