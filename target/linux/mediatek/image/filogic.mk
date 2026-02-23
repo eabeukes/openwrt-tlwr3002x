@@ -2845,20 +2845,19 @@ define Device/tplink_tl-wr3002x-v1
   # From GPL:Configs/partition.conf:
   # os-image 0x00400000 (4096k) and file-system 0x019e0000 (26496k)
   IMAGE_SIZE := 30592k
-  IMAGES += sysupgrade.itb factory.bin
+  IMAGES += sysupgrade.itb factory.bin kernel.bin rootfs.squashfs
   IMAGE/factory.bin := append-kernel | pad-to 4096k | append-rootfs | pad-rootfs | check-size
   IMAGE/sysupgrade.itb := append-kernel | \
 	fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-rootfs | \
 	pad-rootfs | append-metadata
+  IMAGE/kernel.bin := append-kernel
+  IMAGE/rootfs.squashfs := append-rootfs | gzip
 
   # Optional: also build an initramfs FIT for recovery
   IMAGES += initramfs.itb
   IMAGE/initramfs.itb := append-kernel | \
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-initrd | \
 	append-metadata
-  ARTIFACTS := preloader.bin bl31-uboot.fip
-  ARTIFACT/preloader.bin := mt7981-bl2 spim-nor-ddr3
-  ARTIFACT/bl31-uboot.fip := mt7981-bl31-uboot rfb-nor
   DEVICE_PACKAGES := kmod-usb3 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
 endef
 TARGET_DEVICES += tplink_tl-wr3002x-v1
