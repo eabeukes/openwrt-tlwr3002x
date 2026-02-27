@@ -1430,7 +1430,7 @@ static int rtl838x_pie_rule_add(struct rtl838x_switch_priv *priv, struct pie_rul
 
 	mutex_lock(&priv->pie_mutex);
 
-	for (block = 0; block < priv->n_pie_blocks; block++) {
+	for (block = 0; block < priv->r->n_pie_blocks; block++) {
 		for (j = 0; j < 3; j++) {
 			int t = (sw_r32(RTL838X_ACL_BLK_TMPLTE_CTRL(block)) >> (j * 3)) & 0x7;
 
@@ -1443,7 +1443,7 @@ static int rtl838x_pie_rule_add(struct rtl838x_switch_priv *priv, struct pie_rul
 			break;
 	}
 
-	if (block >= priv->n_pie_blocks) {
+	if (block >= priv->r->n_pie_blocks) {
 		mutex_unlock(&priv->pie_mutex);
 		return -EOPNOTSUPP;
 	}
@@ -1487,14 +1487,14 @@ static void rtl838x_pie_init(struct rtl838x_switch_priv *priv)
 		sw_w32(1, RTL838X_ACL_PORT_LOOKUP_CTRL(i));
 
 	/* Power on all PIE blocks */
-	for (int i = 0; i < priv->n_pie_blocks; i++)
+	for (int i = 0; i < priv->r->n_pie_blocks; i++)
 		sw_w32_mask(0, BIT(i), RTL838X_ACL_BLK_PWR_CTRL);
 
 	/* Include IPG in metering */
 	sw_w32(1, RTL838X_METER_GLB_CTRL);
 
 	/* Delete all present rules */
-	rtl838x_pie_rule_del(priv, 0, priv->n_pie_blocks * PIE_BLOCK_SIZE - 1);
+	rtl838x_pie_rule_del(priv, 0, priv->r->n_pie_blocks * PIE_BLOCK_SIZE - 1);
 
 	/* Routing bypasses source port filter */
 	sw_w32_mask(0, 1, RTL838X_DMY_REG27);
@@ -1506,7 +1506,7 @@ static void rtl838x_pie_init(struct rtl838x_switch_priv *priv)
 
 	/* Enable predefined templates 0, 3 and 4 (IPv6 support) for odd blocks */
 	template_selectors = 0 | (3 << 3) | (4 << 6);
-	for (int i = 1; i < priv->n_pie_blocks; i += 2)
+	for (int i = 1; i < priv->r->n_pie_blocks; i += 2)
 		sw_w32(template_selectors, RTL838X_ACL_BLK_TMPLTE_CTRL(i));
 
 	/* Group each pair of physical blocks together to a logical block */
@@ -1613,6 +1613,20 @@ static void rtl838x_vlan_port_pvid_set(int port, enum pbvlan_type type, int pvid
 		sw_w32_mask(0xfff << 16, pvid << 16, RTL838X_VLAN_PORT_PB_VLAN + (port << 2));
 }
 
+static int rtldsa_838x_fast_age(struct rtl838x_switch_priv *priv, int port, int vid)
+{
+	u32 val;
+
+	val = BIT(26) | BIT(23) | (port << 5);
+	if (vid >= 0)
+		val |= BIT(24) | (vid << 10);
+
+	sw_w32(val, priv->r->l2_tbl_flush_ctrl);
+	do { } while (sw_r32(priv->r->l2_tbl_flush_ctrl) & BIT(26));
+
+	return 0;
+}
+
 static int rtl838x_set_ageing_time(unsigned long msec)
 {
 	int t = sw_r32(RTL838X_L2_CTRL_1);
@@ -1700,6 +1714,8 @@ const struct rtldsa_config rtldsa_838x_cfg = {
 	.isr_port_link_sts_chg = RTL838X_ISR_PORT_LINK_STS_CHG,
 	.imr_port_link_sts_chg = RTL838X_IMR_PORT_LINK_STS_CHG,
 	.imr_glb = RTL838X_IMR_GLB,
+	.n_counters = 128,
+	.n_pie_blocks = 12,
 	.port_ignore = 0x1f,
 	.vlan_tables_read = rtl838x_vlan_tables_read,
 	.vlan_set_tagged = rtl838x_vlan_set_tagged,
@@ -1729,6 +1745,7 @@ const struct rtldsa_config rtldsa_838x_cfg = {
 	.vlan_port_keep_tag_set = rtl838x_vlan_port_keep_tag_set,
 	.vlan_port_pvidmode_set = rtl838x_vlan_port_pvidmode_set,
 	.vlan_port_pvid_set = rtl838x_vlan_port_pvid_set,
+	.fast_age = rtldsa_838x_fast_age,
 	.trk_mbr_ctr = rtl838x_trk_mbr_ctr,
 	.rma_bpdu_fld_pmask = RTL838X_RMA_BPDU_FLD_PMSK,
 	.spcl_trap_eapol_ctrl = RTL838X_SPCL_TRAP_EAPOL_CTRL,

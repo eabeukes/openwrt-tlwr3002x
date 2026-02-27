@@ -13,6 +13,7 @@
 #include <asm/mips-cps.h>
 #include <asm/prom.h>
 #include <asm/smp-ops.h>
+#include <linux/of.h>
 #include <linux/smp.h>
 
 #include <mach-rtl-otto.h>
@@ -38,6 +39,8 @@
 #define soc_w32(val, reg)		writel(val, RTL_SOC_BASE + reg)
 
 struct rtl83xx_soc_info soc_info;
+EXPORT_SYMBOL(soc_info);
+
 const void *fdt;
 
 static char rtl_soc_name[16];
@@ -103,6 +106,21 @@ static void __init apply_early_quirks(void)
 		sw_w32(0x3, RTL838X_INT_RW_CTRL);
 }
 
+static void __init apply_dts_quirks(void)
+{
+	struct device_node *node;
+
+	node = of_find_compatible_node(NULL, NULL, "diodes,pt7a75xx-wdt");
+	if (node) {
+		if (soc_info.family == RTL9310_FAMILY_ID) {
+			pr_info("apply quirk for diodes pt7a75xx watchdog\n");
+			sw_w32_mask(GENMASK(13, 12), BIT(12), RTL931X_LED_GLB_CTRL);
+			sw_w32_mask(0x0, BIT(8), RTL931X_MAC_L2_GLOBAL_CTRL2);
+		};
+		of_node_put(node);
+	}
+}
+
 void __init device_tree_init(void)
 {
 	if (!fdt_check_header(&__appended_dtb)) {
@@ -111,6 +129,7 @@ void __init device_tree_init(void)
 	}
 	initial_boot_params = (void *)fdt;
 	unflatten_and_copy_device_tree();
+	apply_dts_quirks();
 
 	/* delay cpc & smp probing to allow devicetree access */
 	mips_cpc_probe();
@@ -286,12 +305,32 @@ static void prepare_highmem(void)
 		return;
 
 	/*
-	 * To use highmem on RTL930x, SRAM must be deactivated and the highmem mapping
-	 * registers must be setup properly. The hardcoded 0x70000000 might be strange
-	 * but at least it conforms somehow to the RTL931x devices.
+	 * The RTL930x provides 3 logical adressing zones that can be configured individually
+	 * and offer an additional memory access indirection. Memory is accessed via the OCP
+	 * bus that checks these regions and maps logical addresses to physical ones. They are
 	 *
-	 * - RTL930x: highmem start 0x20000000 + offset 0x70000000 = 0x90000000
-	 * - RTL931x: highmem start 0x90000000 + no offset at all  = 0x90000000
+	 * zone 1: logical address 0x00000000-0x0fffffff (256 MB) - map register 0xb8004200
+	 * zone 2: logical address 0x10000000-0x13ffffff (64 MB)  - map register 0xb8004210
+	 * zone 3: logical address 0x20000000-0x9fffffff (2 GB)   - map register 0xb8004220
+	 *
+	 * Whenever CPU accesses memory the normal MIPS translation is applied and afterwards
+	 * the bus adds the zone mapping. E.g. a read to 0x81230000 is converted to an cached
+	 * memory access to logical address 0x01230000. It is issued to the OCP bus and the 
+	 * mapping from zone 1 register is added. That allows for two memory topologies:
+	 *
+	 * Linear memory with a maximum of 320 MB:
+	 *
+	 * Zone | map content | logical               | physical
+	 * -------------------+-----------------------+-----------------------
+	 *    1 | 0x00000000  | 0x00000000-0x0fffffff | 0x00000000-0x0fffffff
+	 *    2 | 0x00000000  | 0x10000000-0x13ffffff | 0x10000000-0x13ffffff
+	 *
+	 * 256MB low memory plus up to 2GB high memory:
+	 *
+	 * Zone | map content | logical               | physical
+	 * -------------------+-----------------------+-----------------------
+	 *    1 | 0x00000000  | 0x00000000-0x0fffffff | 0x00000000-0x0fffffff
+	 *    3 | 0x70000000  | 0x20000000-0x9fffffff | 0x10000000-0x7fffffff
 	 */
 
 	pr_info("highmem kernel on RTL930x with > 256 MB RAM, adapt SoC memory mapping\n");
