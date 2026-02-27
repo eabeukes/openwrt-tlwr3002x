@@ -1,5 +1,7 @@
 /dts-v1/;
-#include "mt7981.dtsi"
+#include <dt-bindings/pinctrl/mt65xx.h>
+
+#include "mt7981b.dtsi"
 / {
 	model = "TP-LINK TL-WR3002X";
 	compatible = "tplink,tl-wr3002x-v1", "mediatek,mt7981";
