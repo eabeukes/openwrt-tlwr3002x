@@ -130,7 +130,7 @@ inline void rtl_table_data_w(struct table_reg *r, u32 v, int i);
 void rtldsa_838x_qos_init(struct rtl838x_switch_priv *priv);
 void rtldsa_839x_qos_init(struct rtl838x_switch_priv *priv);
 
-void rtldsa_83xx_fast_age(struct dsa_switch *ds, int port);
+void rtldsa_port_fast_age(struct dsa_switch *ds, int port);
 int rtl83xx_packet_cntr_alloc(struct rtl838x_switch_priv *priv);
 int rtldsa_port_get_stp_state(struct rtl838x_switch_priv *priv, int port);
 int rtl83xx_port_is_under(const struct net_device *dev, struct rtl838x_switch_priv *priv);
@@ -177,7 +177,6 @@ void rtldsa_930x_print_matrix(void);
 /* RTL931x-specific */
 irqreturn_t rtl931x_switch_irq(int irq, void *dev_id);
 void rtldsa_931x_print_matrix(void);
-void rtldsa_931x_config_phy_ability_source(struct rtl838x_switch_priv *priv);
 
 int rtl83xx_lag_add(struct dsa_switch *ds, int group, int port, struct netdev_lag_upper_info *info);
 int rtl83xx_lag_del(struct dsa_switch *ds, int group, int port);
