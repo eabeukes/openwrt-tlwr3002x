@@ -2842,7 +2842,6 @@ define Device/tplink_tl-wr3002x-v1
   DEVICE_DTS := mt7981b-tplink-tl-wr3002x-v1
   DEVICE_DTS_DIR := ../dts
   DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3
-  IMAGE/factory.bin := append-kernel | pad-to 65536 | append-rootfs | pad-rootfs | check-size | # Add custom steps mimicking stock (e.g., append-md5, or call external script for encryption/packing)
 endef
 TARGET_DEVICES += tplink_tl-wr3002x-v1
 

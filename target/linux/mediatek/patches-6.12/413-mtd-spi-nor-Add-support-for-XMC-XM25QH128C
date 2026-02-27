@@ -18,6 +18,6 @@ sectors, each 64KB sized. The chip also supports 4KB sectors.
 +		.id = SNOR_ID(0x20, 0x40, 0x19),
 +		.name = "XM25QH256C",
 +		.size = SZ_32M,
-+		.no_sfdp_flags = SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ,
++		.flags = SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB | SPI_NOR_4BIT_BP | SPI_NOR_TB_SR_BIT6,
  	},
  };
